@@ -1,0 +1,19 @@
+{
+  "name": "chess-analyzer",
+  "version": "1.0.0",
+  "description": "Chess best-move analyzer powered by Stockfish engine",
+  "scripts": {
+    "start": "serve . -p 3000",
+    "dev": "serve . -p 3000"
+  },
+  "keywords": [
+    "chess",
+    "stockfish",
+    "analyzer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.6"
+  }
+}

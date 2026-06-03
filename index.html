@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess Analyzer – Best Move Calculator</title>
+  <meta name="description" content="Analisis posisi catur dan temukan gerakan terbaik menggunakan Stockfish engine. Input FEN, pilih giliran, hitung posisi terbaik." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">♟</span>
+        <span class="logo-text">Chess<span class="logo-accent">Analyzer</span></span>
+      </div>
+      <div class="header-badge">
+        <span class="badge-dot" id="engine-dot"></span>
+        <span id="engine-label">Memuat engine…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+
+    <!-- ══════════════════ LEFT: BOARD ══════════════════ -->
+    <section class="board-section">
+
+      <!-- Captured pieces (opponent's) at top -->
+      <div class="captured-row" id="captured-top" title="Bidak yang ditangkap"></div>
+
+      <!-- Board + coordinate labels -->
+      <div class="board-wrap">
+        <div class="rank-labels" id="rank-labels"></div>
+        <div class="board-col">
+          <div id="chessboard" class="chessboard"></div>
+          <div class="file-labels" id="file-labels"></div>
+        </div>
+      </div>
+
+      <!-- Captured pieces (mine) at bottom -->
+      <div class="captured-row" id="captured-bottom" title="Bidak yang ditangkap"></div>
+
+      <!-- Reserve pieces for board editor -->
+      <div class="reserve-card">
+        <div class="card-header">
+          <span>➕ Tambah Bidak (Drag ke Papan / Klik Kanan untuk Hapus)</span>
+        </div>
+        <div class="reserve-grid">
+          <div class="reserve-row">
+            <div class="reserve-piece-wrap" data-color="w" data-type="p" title="Pion Putih"><div class="piece wp"></div></div>
+            <div class="reserve-piece-wrap" data-color="w" data-type="n" title="Kuda Putih"><div class="piece wn"></div></div>
+            <div class="reserve-piece-wrap" data-color="w" data-type="b" title="Gajah Putih"><div class="piece wb"></div></div>
+            <div class="reserve-piece-wrap" data-color="w" data-type="r" title="Benteng Putih"><div class="piece wr"></div></div>
+            <div class="reserve-piece-wrap" data-color="w" data-type="q" title="Ratu Putih"><div class="piece wq"></div></div>
+            <div class="reserve-piece-wrap" data-color="w" data-type="k" title="Raja Putih"><div class="piece wk"></div></div>
+          </div>
+          <div class="reserve-row">
+            <div class="reserve-piece-wrap" data-color="b" data-type="p" title="Pion Hitam"><div class="piece bp"></div></div>
+            <div class="reserve-piece-wrap" data-color="b" data-type="n" title="Kuda Hitam"><div class="piece bn"></div></div>
+            <div class="reserve-piece-wrap" data-color="b" data-type="b" title="Gajah Hitam"><div class="piece bb"></div></div>
+            <div class="reserve-piece-wrap" data-color="b" data-type="r" title="Benteng Hitam"><div class="piece br"></div></div>
+            <div class="reserve-piece-wrap" data-color="b" data-type="q" title="Ratu Hitam"><div class="piece bq"></div></div>
+            <div class="reserve-piece-wrap" data-color="b" data-type="k" title="Raja Hitam"><div class="piece bk"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Move history -->
+      <div class="history-card">
+        <div class="card-header">
+          <span>📋 Riwayat Gerakan</span>
+          <button class="btn-sm" id="btn-copy-pgn" title="Salin PGN">⎘ PGN</button>
+        </div>
+        <div class="move-list" id="move-list"></div>
+      </div>
+
+    </section>
+
+    <!-- ══════════════════ RIGHT: CONTROLS ══════════════════ -->
+    <section class="control-section">
+
+      <!-- Action buttons row -->
+      <div class="btn-row" role="toolbar" aria-label="Kontrol papan">
+        <button class="btn btn-outline" id="btn-startpos">▶ Start Pos</button>
+        <button class="btn btn-outline" id="btn-setfen">📋 Set FEN</button>
+        <button class="btn btn-outline" id="btn-clear">🗑 Clear</button>
+        <button class="btn btn-outline" id="btn-flip">⇅ Flip</button>
+        <button class="btn btn-outline" id="btn-undo">↩ Undo</button>
+      </div>
+
+      <!-- FEN input -->
+      <div class="input-card fen-card">
+        <span class="input-tag">FEN</span>
+        <input
+          type="text"
+          id="fen-input"
+          class="fen-input"
+          placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="icon-btn" id="btn-copy-fen" title="Salin FEN">⎘</button>
+      </div>
+
+      <!-- Turn + Castling -->
+      <div class="options-row">
+
+        <div class="opt-card">
+          <div class="opt-title">Giliran</div>
+          <label class="radio-row" id="lbl-white">
+            <input type="radio" name="turn" id="turn-white" value="w" />
+            <span class="radio-pip"></span>
+            <span class="piece-glyph w">♔</span>
+            White to move
+          </label>
+          <label class="radio-row" id="lbl-black">
+            <input type="radio" name="turn" id="turn-black" value="b" checked />
+            <span class="radio-pip"></span>
+            <span class="piece-glyph b">♚</span>
+            Black to move
+          </label>
+        </div>
+
+        <div class="opt-card">
+          <div class="opt-title">Hak Rokade</div>
+          <div class="castle-grid">
+            <label class="chk-row"><input type="checkbox" id="c-wk" checked /><span class="chk-box"></span>White O-O</label>
+            <label class="chk-row"><input type="checkbox" id="c-wq" checked /><span class="chk-box"></span>White O-O-O</label>
+            <label class="chk-row"><input type="checkbox" id="c-bk" checked /><span class="chk-box"></span>Black O-O</label>
+            <label class="chk-row"><input type="checkbox" id="c-bq" checked /><span class="chk-box"></span>Black O-O-O</label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- CALCULATE button -->
+      <button class="btn btn-calc" id="btn-calculate">
+        <span id="calc-icon">⚡</span>
+        <span id="calc-label">Hitung Posisi Terbaik</span>
+        <span class="spinner" id="calc-spinner" hidden>◌</span>
+      </button>
+
+      <!-- Show / Make move -->
+      <div class="mode-card">
+        <label class="radio-row">
+          <input type="radio" name="mv-mode" id="mode-show" value="show" checked />
+          <span class="radio-pip"></span>
+          Tampilkan Gerakan
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="mv-mode" id="mode-make" value="make" />
+          <span class="radio-pip"></span>
+          Lakukan Gerakan
+        </label>
+      </div>
+
+      <!-- Result panel -->
+      <div class="result-card" id="result-card">
+        <div class="result-top-row">
+          <div class="res-block">
+            <div class="res-label">Gerakan Terbaik</div>
+            <div class="res-val gold" id="res-move">—</div>
+          </div>
+          <div class="res-block">
+            <div class="res-label">Skor</div>
+            <div class="res-val green" id="res-score">—</div>
+          </div>
+          <div class="res-block">
+            <div class="res-label">Depth</div>
+            <div class="res-val" id="res-depth">—</div>
+          </div>
+        </div>
+        <div class="pv-block">
+          <span class="res-label">PV:&nbsp;</span>
+          <span class="pv-text" id="res-pv">—</span>
+        </div>
+      </div>
+
+      <!-- Time control -->
+      <div class="time-card">
+        <label class="input-tag" for="think-time">⏱ Waktu (detik)</label>
+        <input type="number" id="think-time" class="num-input" value="3" min="1" max="60" />
+        <div class="progress-wrap">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+      </div>
+
+      <!-- Engine status -->
+      <div class="status-row" id="status-row">
+        <span class="status-pip loading" id="status-pip"></span>
+        <span id="status-msg">Memuat Stockfish engine…</span>
+      </div>
+
+      <!-- Usage guide -->
+      <details class="guide-card">
+        <summary>📖 Panduan Penggunaan</summary>
+        <ul>
+          <li>Klik <strong>Start Pos</strong> untuk posisi awal standar</li>
+          <li>Drag &amp; drop bidak untuk mengatur posisi custom</li>
+          <li>Tempel <strong>FEN</strong> lalu klik <strong>Set FEN</strong></li>
+          <li>Pilih <strong>giliran</strong> (Putih/Hitam) &amp; hak <strong>Rokade</strong></li>
+          <li>Atur <strong>waktu berpikir</strong> (1–60 detik)</li>
+          <li>Klik <strong>Hitung Posisi Terbaik</strong></li>
+          <li><em>Tampilkan Gerakan</em> → sorot di papan</li>
+          <li><em>Lakukan Gerakan</em> → bidak langsung bergerak</li>
+          <li>Klik gerakan di riwayat untuk menyalin notasi</li>
+        </ul>
+      </details>
+
+    </section>
+  </main>
+
+  <!-- Promotion chooser -->
+  <div id="promo-overlay" hidden>
+    <div class="promo-box">
+      <p class="promo-title">Promosi Pion — Pilih Bidak</p>
+      <div id="promo-btns" class="promo-btns"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Floating drag ghost -->
+  <div id="drag-ghost"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
